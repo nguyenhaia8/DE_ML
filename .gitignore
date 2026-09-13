@@ -1,0 +1,10 @@
+.DS_Store
+app/.venv
+app/frontend/node_modules
+app/frontend/dist
+app/frontend/.venv
+app/frontend/*.tsbuildinfo
+app/frontend/vite.config.js
+app/frontend/vite.config.d.ts
+app/backend/__pycache__
+app/backend/*.pyc
