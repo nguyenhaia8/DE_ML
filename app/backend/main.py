@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import re
+import sys
 from dataclasses import dataclass
 from io import BytesIO
 from pathlib import Path
@@ -11,6 +12,17 @@ from fastapi import FastAPI, File, Form, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 
+PROJECT_ROOT = Path(__file__).resolve().parents[2]
+SOURCE_DIR = PROJECT_ROOT / "source"
+if str(SOURCE_DIR) not in sys.path:
+    sys.path.insert(0, str(SOURCE_DIR))
+
+from embedding_utils import (  # noqa: E402
+    DEFAULT_CHUNK_OVERLAP_TOKENS,
+    EMBEDDING_STRATEGY,
+    embed_text_with_model,
+)
+
 TRAIT_COLS = ["cEXT", "cNEU", "cAGR", "cCON", "cOPN"]
 TRAIT_NAMES = {
     "cEXT": "Extraversion",
@@ -20,7 +32,6 @@ TRAIT_NAMES = {
     "cOPN": "Openness",
 }
 
-PROJECT_ROOT = Path(__file__).resolve().parents[2]
 MODEL_DIR = PROJECT_ROOT / "source" / "models"
 BASELINE_MODEL_PATH = MODEL_DIR / "baseline.joblib"
 IMPROVED_MODEL_PATH = MODEL_DIR / "improved.joblib"
@@ -173,18 +184,12 @@ def predict(
         for trait in bundle["trait_cols"]
     ]
 
-    warnings = []
-    if config.id == "improved" and word_count > 256:
-        warnings.append(
-            "The current Sentence-BERT model truncates long inputs; consider chunking CVs before relying on improved-model scores."
-        )
-
     return PredictionResponse(
         model=ModelInfo(id=config.id, name=config.name, path=str(config.path)),
         source=source,
         word_count=word_count,
-        truncated=config.id == "improved" and word_count > 256,
-        warnings=warnings,
+        truncated=False,
+        warnings=[],
         scores=scores,
     )
 
@@ -213,6 +218,11 @@ def featurize(bundle: dict, text: str):
         return bundle["svd"].transform(bundle["vectorizer"].transform([text]))
 
     if model_type == "improved_sbert_xgboost":
+        if bundle.get("embedding_strategy") != EMBEDDING_STRATEGY:
+            raise HTTPException(
+                status_code=503,
+                detail="Improved model was trained without full-document chunk pooling. Retrain it before serving predictions.",
+            )
         model_name = bundle["embed_model_name"]
         if model_name not in _embedder_cache:
             try:
@@ -223,7 +233,14 @@ def featurize(bundle: dict, text: str):
                     detail="Improved model requires sentence-transformers. Install the optional improved-model dependencies first.",
                 ) from exc
             _embedder_cache[model_name] = SentenceTransformer(model_name)
-        return _embedder_cache[model_name].encode([text], convert_to_numpy=True)
+        return embed_text_with_model(
+            _embedder_cache[model_name],
+            text,
+            chunk_tokens=bundle.get("chunk_tokens"),
+            overlap_tokens=bundle.get(
+                "chunk_overlap_tokens", DEFAULT_CHUNK_OVERLAP_TOKENS
+            ),
+        )
 
     raise HTTPException(status_code=503, detail=f"Unsupported model_type: {model_type}")
 

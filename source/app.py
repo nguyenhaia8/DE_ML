@@ -17,6 +17,11 @@ import streamlit as st
 import plotly.graph_objects as go
 
 from common import TRAIT_COLS, TRAIT_NAMES, clean_text
+from embedding_utils import (
+    DEFAULT_CHUNK_OVERLAP_TOKENS,
+    EMBEDDING_STRATEGY,
+    embed_text_with_model,
+)
 from extract_cv_text import extract_text_from_pdf
 
 st.set_page_config(page_title="CV Personality Predictor", layout="centered")
@@ -44,8 +49,19 @@ def predict_with_bundle(bundle, text):
     if bundle["model_type"] == "baseline_tfidf_svd_rf":
         X = bundle["svd"].transform(bundle["vectorizer"].transform([text]))
     elif bundle["model_type"] == "improved_sbert_xgboost":
+        if bundle.get("embedding_strategy") != EMBEDDING_STRATEGY:
+            raise ValueError(
+                "Improved model was trained without full-document chunk pooling. Retrain it before serving predictions."
+            )
         model = get_sbert_model(bundle["embed_model_name"])
-        X = model.encode([text], convert_to_numpy=True)
+        X = embed_text_with_model(
+            model,
+            text,
+            chunk_tokens=bundle.get("chunk_tokens"),
+            overlap_tokens=bundle.get(
+                "chunk_overlap_tokens", DEFAULT_CHUNK_OVERLAP_TOKENS
+            ),
+        )
     else:
         raise ValueError(f"Unknown model_type: {bundle['model_type']}")
 

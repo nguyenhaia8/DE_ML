@@ -1,10 +1,45 @@
+# Operating system files
 .DS_Store
-app/.venv
-app/frontend/node_modules
-app/frontend/dist
-app/frontend/.venv
-app/frontend/*.tsbuildinfo
-app/frontend/vite.config.js
-app/frontend/vite.config.d.ts
-app/backend/__pycache__
-app/backend/*.pyc
+Thumbs.db
+
+# Python caches and environments
+__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+venv/
+env/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+*.egg-info/
+
+# Node and Vite build output
+node_modules/
+dist/
+.vite/
+*.tsbuildinfo
+vite.config.js
+vite.config.d.ts
+
+# Local configuration and logs
+.env
+.env.*
+!.env.example
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+*.tmp
+
+# Editor files
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# Generated analysis output
+source/predictions_*.csv
