@@ -1,0 +1,66 @@
+flowchart TB
+    subgraph training ["Offline model training"]
+        essays["essays.csv: 2,467 labeled essays"]
+        trainingPrep["Normalize text and map five trait labels to 0 or 1"]
+        baselineTraining["TF-IDF to 100 SVD features to five Random Forests"]
+        improvedTraining["Token chunks to Sentence-BERT to pooled embeddings to five XGBoost classifiers"]
+        evaluation["Five-fold classifier evaluation: Pearson r; refit on all essays"]
+        essays --> trainingPrep
+        trainingPrep --> baselineTraining
+        trainingPrep --> improvedTraining
+        baselineTraining --> evaluation
+        improvedTraining --> evaluation
+    end
+
+    subgraph artifacts ["Local model artifacts"]
+        bundles["baseline.joblib and improved.joblib: models and metadata"]
+        encoderCache["Separate pretrained encoder cache: all-MiniLM-L6-v2"]
+    end
+
+    subgraph prediction ["Interactive prediction"]
+        cvInput["CV text or a text-based PDF"]
+        reactApi["React UI and FastAPI: text and PDF endpoints"]
+        streamlit["Optional Streamlit demo: direct Python inference"]
+        textPrep["Extract PDF text and normalize whitespace"]
+        selectModel["Select baseline or improved model; load saved bundle"]
+        baselineInference["Saved TF-IDF and SVD to five Random Forests"]
+        improvedInference["254-token chunks, overlap 32, SBERT, weighted pooling, five XGBoost classifiers"]
+        probabilities["Five independent Big Five probabilities between 0 and 1"]
+        results["React trait scores or Streamlit radar chart"]
+        cvInput --> reactApi
+        cvInput --> streamlit
+        reactApi --> textPrep
+        streamlit --> textPrep
+        textPrep --> selectModel
+        selectModel -->|"Baseline"| baselineInference
+        selectModel -->|"Improved"| improvedInference
+        baselineInference --> probabilities
+        improvedInference --> probabilities
+        probabilities --> results
+    end
+
+    subgraph batchReview ["Offline CV scoring and category review"]
+        resumes["Resume.csv: 2,484 CVs with job Category"]
+        batchScoring["predict_and_compare.py: same model feature paths"]
+        categoryReport["Prediction CSV and mean trait score by Category"]
+        resumes --> batchScoring
+        batchScoring --> categoryReport
+    end
+
+    huggingFace["Hugging Face: pretrained encoder download"]
+    evaluation -->|"Save bundles"| bundles
+    bundles -->|"Load"| selectModel
+    bundles -->|"Load"| batchScoring
+    huggingFace -.->|"First use"| encoderCache
+    encoderCache -.->|"Encode essays"| improvedTraining
+    encoderCache -.->|"Encode CVs"| improvedInference
+    encoderCache -.->|"Improved model only"| batchScoring
+
+    classDef data fill:#EEF2FF,stroke:#818CF8,color:#1E293B
+    classDef baseline fill:#EFF6FF,stroke:#60A5FA,color:#1E293B
+    classDef improved fill:#ECFDF5,stroke:#34D399,color:#1E293B
+    classDef output fill:#FFF7ED,stroke:#FB923C,color:#1E293B
+    class essays,resumes,bundles,encoderCache data
+    class baselineTraining,baselineInference baseline
+    class improvedTraining,improvedInference improved
+    class probabilities,results,categoryReport output

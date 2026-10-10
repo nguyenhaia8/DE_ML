@@ -4,6 +4,10 @@ Re-implementation and improvement of:
 Grunenberg et al. (2024), *"Machine learning in recruiting: predicting personality
 from CVs and short text responses"*, Frontiers in Social Psychology.
 
+See the [AI architecture](../docs/AI_ARCHITECTURE.md) for the model training,
+long-document embedding, prediction, and evaluation flows, including an
+[exportable diagram](../docs/ai-architecture.svg).
+
 ## 1. Why two datasets?
 
 `Resume.csv` (your CV data) has **no Big Five labels** — it only has
