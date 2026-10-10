@@ -4,6 +4,13 @@ Vite + React frontend for the CV personality prediction model.
 
 ## Run
 
+On macOS, double-click `start.command` in the project root to set up and start
+both the frontend and backend. Keep Terminal open, and press Control-C to stop.
+The launcher selects available ports and connects the frontend to the correct
+API automatically. See `../../source/README.md` for setup and recovery details.
+
+To start the frontend manually:
+
 ```bash
 npm install
 npm run dev

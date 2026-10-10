@@ -1,0 +1,80 @@
+digraph aiArchitecture {
+    graph [
+        rankdir=TB, bgcolor="#FFFFFF", pad=0.35, nodesep=0.32,
+        ranksep=0.60, splines=polyline, compound=true,
+        fontname="Helvetica", fontsize=24, fontcolor="#0F172A",
+        label="CV PERSONALITY PREDICTION\nAI architecture · current implementation",
+        labelloc=t, labeljust=l
+    ];
+    node [shape=box, style="rounded,filled", fillcolor="#FFFFFF", color="#CBD5E1", penwidth=1.1, fontname="Helvetica", fontsize=13, fontcolor="#1E293B", margin="0.18,0.12"];
+    edge [color="#94A3B8", penwidth=1.2, arrowsize=0.65, fontname="Helvetica", fontsize=10, fontcolor="#64748B"];
+
+    subgraph clusterTraining {
+        label="1  OFFLINE MODEL TRAINING";
+        style="rounded,filled"; fillcolor="#F8FAFC"; color="#CBD5E1";
+        fontname="Helvetica-Bold"; fontsize=15; margin=18;
+        essays [label="essays.csv\n2,467 labeled essays\nFive binary Big Five labels", fillcolor="#EEF2FF", color="#818CF8"];
+        trainingPrep [label="Training text preparation\nNormalize whitespace\nMap y / n to 1 / 0"];
+        baselineTraining [label="BASELINE\nTF-IDF word + bigram features\nSVD: 100 dimensions\n5 Random Forests, 300 trees each", fillcolor="#EFF6FF", color="#60A5FA"];
+        improvedTraining [label="IMPROVED\nOverlapping tokenizer chunks\nSentence-BERT + document pooling\n5 XGBoost classifiers, 300 trees each", fillcolor="#ECFDF5", color="#34D399"];
+        evaluation [label="Evaluate and refit\n5-fold classifier predictions\nPearson r for each trait\nFinal models fit on all essays"];
+        essays -> trainingPrep;
+        trainingPrep -> baselineTraining;
+        trainingPrep -> improvedTraining;
+        baselineTraining -> evaluation;
+        improvedTraining -> evaluation;
+    }
+
+    subgraph clusterArtifacts {
+        label="LOCAL ARTIFACTS";
+        style="rounded,filled"; fillcolor="#F5F3FF"; color="#C4B5FD";
+        fontname="Helvetica-Bold"; fontsize=15; margin=18;
+        bundles [shape=cylinder, style=filled, label="Model bundles\nbaseline.joblib / improved.joblib\nClassifiers, feature configuration,\ntrait names and CV results", fillcolor="#EEF2FF", color="#818CF8"];
+        encoderCache [shape=cylinder, style=filled, label="Separate encoder cache\nall-MiniLM-L6-v2\nPretrained weights + tokenizer\n384-dimensional embeddings", fillcolor="#EEF2FF", color="#818CF8"];
+    }
+
+    subgraph clusterPrediction {
+        label="2  INTERACTIVE PREDICTION";
+        style="rounded,filled"; fillcolor="#F8FAFC"; color="#CBD5E1";
+        fontname="Helvetica-Bold"; fontsize=15; margin=18;
+        cvInput [label="Resume input\nPasted CV text\nor text-based PDF"];
+        reactApi [label="React UI + FastAPI\nText / PDF prediction endpoints\nAPI requires at least 20 words"];
+        streamlit [label="Optional Streamlit demo\nDirect Python prediction\nBypasses the REST API"];
+        textPrep [label="Text preparation\npdfplumber extraction for PDFs\nWhitespace normalization"];
+        selectModel [label="Model selection\nLoad baseline or improved bundle\nAPI caches bundles in memory"];
+        baselineInference [label="BASELINE INFERENCE\nSaved TF-IDF vocabulary\nSaved SVD transform\n5 Random Forest classifiers", fillcolor="#EFF6FF", color="#60A5FA"];
+        improvedInference [label="IMPROVED INFERENCE\n254 content tokens / chunk\n32-token overlap + Sentence-BERT\nWeighted mean + L2 normalization\n5 XGBoost classifiers", fillcolor="#ECFDF5", color="#34D399"];
+        probabilities [label="Big Five probabilities\nExtraversion · Neuroticism\nAgreeableness · Conscientiousness\nOpenness\n5 independent values from 0 to 1", fillcolor="#FFF7ED", color="#FB923C"];
+        results [label="Results\nReact trait scores\nStreamlit radar chart + table", fillcolor="#FFF7ED", color="#FB923C"];
+        cvInput -> reactApi;
+        cvInput -> streamlit;
+        reactApi -> textPrep;
+        streamlit -> textPrep;
+        textPrep -> selectModel;
+        selectModel -> baselineInference [label="Baseline"];
+        selectModel -> improvedInference [label="Improved"];
+        baselineInference -> probabilities;
+        improvedInference -> probabilities;
+        probabilities -> results;
+    }
+
+    subgraph clusterBatchReview {
+        label="3  OFFLINE CV SCORING AND CATEGORY REVIEW";
+        style="rounded,filled"; fillcolor="#FFF7ED"; color="#FED7AA";
+        fontname="Helvetica-Bold"; fontsize=15; margin=18;
+        resumes [label="Resume.csv\n2,484 CVs + job Category\nNo personality ground truth", fillcolor="#EEF2FF", color="#818CF8"];
+        batchScoring [label="predict_and_compare.py\nSame feature and classifier paths\nScore each CV with one model"];
+        categoryReport [label="Analysis output\nPrediction CSV\nMean trait scores by Category", fillcolor="#FFF7ED", color="#FB923C"];
+        resumes -> batchScoring;
+        batchScoring -> categoryReport;
+    }
+
+    huggingFace [label="Hugging Face\nDownload pretrained encoder\non first use", style="rounded,dashed,filled", fillcolor="#FAFAFA"];
+    evaluation -> bundles [label="Save bundles"];
+    bundles -> selectModel [label="Load"];
+    bundles -> batchScoring [label="Load"];
+    huggingFace -> encoderCache [label="First use", style=dashed, constraint=false];
+    encoderCache -> improvedTraining [label="Encode essays", style=dashed, constraint=false];
+    encoderCache -> improvedInference [label="Encode CVs", style=dashed, constraint=false];
+    encoderCache -> batchScoring [label="Improved model only", style=dashed, constraint=false];
+}

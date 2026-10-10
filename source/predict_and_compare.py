@@ -19,6 +19,11 @@ import numpy as np
 import pandas as pd
 
 from common import TRAIT_COLS, TRAIT_NAMES, load_resumes, clean_text
+from embedding_utils import (
+    DEFAULT_CHUNK_OVERLAP_TOKENS,
+    EMBEDDING_STRATEGY,
+    embed_texts_with_model,
+)
 
 
 def predict_baseline(bundle, texts):
@@ -32,8 +37,20 @@ def predict_baseline(bundle, texts):
 def predict_improved(bundle, texts):
     from sentence_transformers import SentenceTransformer
 
+    if bundle.get("embedding_strategy") != EMBEDDING_STRATEGY:
+        raise ValueError(
+            "Improved model was trained without full-document chunk pooling. Retrain it before scoring resumes."
+        )
     model = SentenceTransformer(bundle["embed_model_name"])
-    X = model.encode(texts, show_progress_bar=True, convert_to_numpy=True)
+    X = embed_texts_with_model(
+        model,
+        texts,
+        chunk_tokens=bundle.get("chunk_tokens"),
+        overlap_tokens=bundle.get(
+            "chunk_overlap_tokens", DEFAULT_CHUNK_OVERLAP_TOKENS
+        ),
+        show_progress_bar=True,
+    )
     preds = {}
     for trait in bundle["trait_cols"]:
         preds[trait] = bundle["classifiers"][trait].predict_proba(X)[:, 1]

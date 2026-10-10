@@ -28,20 +28,29 @@ from sklearn.model_selection import StratifiedKFold, cross_val_predict
 from xgboost import XGBClassifier
 
 from common import TRAIT_COLS, TRAIT_NAMES, load_essays, clean_text
+from embedding_utils import DEFAULT_CHUNK_OVERLAP_TOKENS, embed_texts_chunked
 
 
-def embed_texts(texts, model_name="all-MiniLM-L6-v2", batch_size=32):
-    """Encode texts with Sentence-BERT. Returns (n_docs, embedding_dim) array."""
+def embed_texts(
+    texts,
+    model_name="all-MiniLM-L6-v2",
+    batch_size=32,
+    chunk_tokens=None,
+    chunk_overlap_tokens=DEFAULT_CHUNK_OVERLAP_TOKENS,
+):
+    """Encode complete documents using overlapping chunks and weighted pooling."""
     from sentence_transformers import SentenceTransformer
 
     model = SentenceTransformer(model_name)
-    embeddings = model.encode(
+    embeddings, embedding_metadata = embed_texts_chunked(
+        model,
         texts,
         batch_size=batch_size,
+        chunk_tokens=chunk_tokens,
+        overlap_tokens=chunk_overlap_tokens,
         show_progress_bar=True,
-        convert_to_numpy=True,
     )
-    return embeddings, model_name
+    return embeddings, model_name, embedding_metadata
 
 
 def main():
@@ -49,6 +58,18 @@ def main():
     parser.add_argument("--data", default="essays.csv")
     parser.add_argument("--out", default="models/improved.joblib")
     parser.add_argument("--embed-model", default="all-MiniLM-L6-v2")
+    parser.add_argument(
+        "--chunk-tokens",
+        type=int,
+        default=None,
+        help="Content tokens per chunk (default: encoder maximum minus special tokens)",
+    )
+    parser.add_argument(
+        "--chunk-overlap-tokens",
+        type=int,
+        default=DEFAULT_CHUNK_OVERLAP_TOKENS,
+        help="Tokenizer-token overlap between adjacent chunks",
+    )
     parser.add_argument("--skip-shap", action="store_true", help="Skip SHAP (faster)")
     args = parser.parse_args()
 
@@ -58,8 +79,18 @@ def main():
     print(f"Loaded {len(texts)} labeled documents.")
 
     print(f"Encoding with Sentence-BERT ({args.embed_model}) ...")
-    X, embed_model_name = embed_texts(texts, model_name=args.embed_model)
+    X, embed_model_name, embedding_metadata = embed_texts(
+        texts,
+        model_name=args.embed_model,
+        chunk_tokens=args.chunk_tokens,
+        chunk_overlap_tokens=args.chunk_overlap_tokens,
+    )
     print(f"Embedding matrix shape: {X.shape}")
+    print(
+        "Chunking: "
+        f"{embedding_metadata['chunk_tokens']} content tokens, "
+        f"{embedding_metadata['chunk_overlap_tokens']} overlap tokens"
+    )
 
     classifiers = {}
     results = {}
@@ -125,6 +156,7 @@ def main():
         "model_type": "improved_sbert_xgboost",
         "cv_results": results,
         "shap_summaries": shap_summaries,
+        **embedding_metadata,
     }
 
     os.makedirs(os.path.dirname(args.out) or ".", exist_ok=True)

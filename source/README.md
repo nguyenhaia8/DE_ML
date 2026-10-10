@@ -4,6 +4,10 @@ Re-implementation and improvement of:
 Grunenberg et al. (2024), *"Machine learning in recruiting: predicting personality
 from CVs and short text responses"*, Frontiers in Social Psychology.
 
+See the [AI architecture](../docs/AI_ARCHITECTURE.md) for the model training,
+long-document embedding, prediction, and evaluation flows, including an
+[exportable diagram](../docs/ai-architecture.svg).
+
 ## 1. Why two datasets?
 
 `Resume.csv` (your CV data) has **no Big Five labels** — it only has
@@ -24,6 +28,39 @@ curl -L -o essays.csv https://raw.githubusercontent.com/SenticNet/personality-de
 ```
 
 ## 2. Install
+
+On macOS, double-click **`start.command` in the project root**. It starts the
+React app and Python API and opens your browser. You can also run it from any
+directory:
+
+```bash
+/path/to/DE_ML/start.command
+```
+
+The launcher creates or repairs `app/.venv`, installs missing Python and Node
+dependencies, chooses available ports, and checks a real baseline prediction
+before opening the app. Launching it again reuses the running launcher. Keep
+Terminal open; **Control-C** stops its servers. Logs are in `.run/web/`.
+
+For the original Streamlit demo described below:
+
+```bash
+./start.command --streamlit
+```
+
+Run that command from the project root. Add `--no-browser` to either mode to
+print the URL without opening a browser. Streamlit logs are in `.run/streamlit/`.
+
+Python 3.10–3.13 is required; the React app also needs Node.js 20.19 or a
+supported release starting at 22.12, plus npm. If a compatible runtime is
+missing and Homebrew is installed, the launcher installs it. Otherwise it
+prints the required installation step. First setup requires internet; later
+runs reuse working dependencies. A missing or unusable baseline model is
+retrained from `essays.csv` (downloaded if missing), preserving the previous
+model. This can take several minutes. The improved model is trained separately
+with the command in section 3, and its encoder needs internet until cached.
+
+To install dependencies manually:
 
 ```bash
 pip install -r requirements.txt

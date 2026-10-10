@@ -15,7 +15,7 @@ const MODEL_STORAGE_KEY = "cv-personality-model";
 const SAMPLE_TEXT = `Senior business development manager with experience building partner pipelines, launching customer programs, and coordinating sales, product, and operations teams. Led forecasting rituals, built CRM reporting habits, mentored account managers, and improved renewal workflows across healthcare and technology accounts.`;
 
 function App() {
-  const [apiBaseUrl, setApiBaseUrl] = useState(() => localStorage.getItem(API_BASE_STORAGE_KEY) ?? "http://127.0.0.1:8000");
+  const [apiBaseUrl, setApiBaseUrl] = useState(() => import.meta.env.VITE_API_BASE_URL || localStorage.getItem(API_BASE_STORAGE_KEY) || "http://127.0.0.1:8000");
   const [modelId, setModelId] = useState(() => localStorage.getItem(MODEL_STORAGE_KEY) ?? "baseline");
   const [mode, setMode] = useState<InputMode>("text");
   const [text, setText] = useState("");
@@ -235,9 +235,7 @@ function App() {
                 onChange={(event) => setText(event.target.value)}
                 placeholder="Paste resume text here..."
               />
-              <span className={modelId === "improved" && wordCount > 256 ? "input-meter warning" : "input-meter"}>
-                {wordCount} words {modelId === "improved" && wordCount > 256 ? " - likely truncated by the current encoder" : ""}
-              </span>
+              <span className="input-meter">{wordCount} words</span>
             </label>
           ) : (
             <div className="drop-zone">
@@ -254,9 +252,7 @@ function App() {
             <label className="text-entry pdf-preview">
               <span>Extracted content</span>
               <textarea value={pdfText} readOnly />
-              <span className={modelId === "improved" && activeWordCount > 256 ? "input-meter warning" : "input-meter"}>
-                {activeWordCount} words {modelId === "improved" && activeWordCount > 256 ? " - likely truncated by the current encoder" : ""}
-              </span>
+              <span className="input-meter">{activeWordCount} words</span>
             </label>
           ) : null}
 
@@ -309,7 +305,7 @@ function ResultsView({ prediction }: { prediction: PredictionResponse }) {
         <div className="meta-list">
           <Metric label="Source" value={prediction.source ?? "text"} />
           <Metric label="Words" value={prediction.wordCount?.toLocaleString() ?? "Backend"} />
-          <Metric label="Encoder limit" value={prediction.truncated ? "Likely hit" : "Clear"} />
+          <Metric label="Document coverage" value={prediction.truncated ? "Partial" : "Full CV"} />
         </div>
       </div>
 
