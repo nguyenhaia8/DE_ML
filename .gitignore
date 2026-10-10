@@ -7,6 +7,8 @@ __pycache__/
 *.py[cod]
 *$py.class
 .venv/
+.venv.backup-*/
+.run/
 venv/
 env/
 .pytest_cache/
@@ -43,3 +45,4 @@ yarn-error.log*
 
 # Generated analysis output
 source/predictions_*.csv
+source/models/*.backup-*.joblib

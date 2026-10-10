@@ -15,7 +15,7 @@ const MODEL_STORAGE_KEY = "cv-personality-model";
 const SAMPLE_TEXT = `Senior business development manager with experience building partner pipelines, launching customer programs, and coordinating sales, product, and operations teams. Led forecasting rituals, built CRM reporting habits, mentored account managers, and improved renewal workflows across healthcare and technology accounts.`;
 
 function App() {
-  const [apiBaseUrl, setApiBaseUrl] = useState(() => localStorage.getItem(API_BASE_STORAGE_KEY) ?? "http://127.0.0.1:8000");
+  const [apiBaseUrl, setApiBaseUrl] = useState(() => import.meta.env.VITE_API_BASE_URL || localStorage.getItem(API_BASE_STORAGE_KEY) || "http://127.0.0.1:8000");
   const [modelId, setModelId] = useState(() => localStorage.getItem(MODEL_STORAGE_KEY) ?? "baseline");
   const [mode, setMode] = useState<InputMode>("text");
   const [text, setText] = useState("");

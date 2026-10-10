@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os
 import re
 import sys
 from dataclasses import dataclass
@@ -90,12 +91,13 @@ MODEL_CONFIGS: dict[str, ModelConfig] = {
 }
 
 app = FastAPI(title="CV Personality Prediction API", version="0.1.0")
+allowed_origins = os.environ.get(
+    "CV_PERSONALITY_ALLOWED_ORIGINS",
+    "http://127.0.0.1:5173,http://localhost:5173",
+)
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "http://127.0.0.1:5173",
-        "http://localhost:5173",
-    ],
+    allow_origins=[origin.strip() for origin in allowed_origins.split(",") if origin.strip()],
     allow_credentials=False,
     allow_methods=["GET", "POST", "OPTIONS"],
     allow_headers=["*"],
